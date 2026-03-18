@@ -1,0 +1,21 @@
+# Hungary Chickenpox Dataset Config
+inherit: base.yaml
+
+data:
+  name: "chickenpox"
+  dataset: "HungaryCounty"
+  micro_nodes: 20  # 20 counties
+  macro_nodes: 5   # Learned regions
+  features: 4     # Node features
+  train_ratio: 0.8
+  lags: 4         # Historical weeks to use
+
+model:
+  hidden_dim: 32
+  ceo:
+    n_macro_nodes: 5
+    ei_weight: 0.1
+
+training:
+  epochs: 100
+  learning_rate: 0.005

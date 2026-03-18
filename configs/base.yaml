@@ -1,0 +1,31 @@
+# CET-Epi Base Configuration
+project:
+  name: "cet-epi"
+  seed: 42
+
+hardware:
+  device: "cuda"
+  mixed_precision: true
+  compile_mode: true  # PyTorch 2.0 compile for MI300X
+
+training:
+  epochs: 200
+  batch_size: 1  # Temporal graphs are sequential
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  gradient_clip: 1.0
+  early_stopping: 20
+
+model:
+  hidden_dim: 64
+  num_layers: 2
+  dropout: 0.3
+  ceo:
+    n_macro_nodes: 5  # Will be learned/defined per dataset
+    ei_weight: 0.1    # Lambda for emergence regularization
+    sparsity_weight: 0.01
+
+logging:
+  log_interval: 10
+  checkpoint_interval: 50
+  tensorboard: true
