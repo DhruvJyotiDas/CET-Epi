@@ -80,11 +80,6 @@ class CET_Epi(nn.Module):
             ei_loss: Emergence regularization term
             (optional) intermediate dict
         """
-        # Handle temporal input if needed
-        if x.dim() == 3:
-            # [N, T, F] -> [N, F] (use last timestep or aggregate)
-            x = x[:, -1, :]  # Simplified: use last timestep
-        
         # 1. Micro encoding
         h_micro = self.micro_encoder(x, edge_index, edge_weight)
         
@@ -103,7 +98,10 @@ class CET_Epi(nn.Module):
         predictions = self.predictor(h_micro_fused, h_macro_fused, S)
         
         # Emergence loss (negative EI to maximize)
-        ei_loss = -ei_score if ei_score is not None else torch.tensor(0.0)
+        if ei_score is None:
+            ei_loss = torch.zeros((), device=predictions.device, dtype=predictions.dtype)
+        else:
+            ei_loss = -ei_score.to(device=predictions.device, dtype=predictions.dtype)
         
         if return_all:
             intermediates = {

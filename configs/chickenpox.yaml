@@ -12,6 +12,7 @@ data:
 
 model:
   hidden_dim: 32
+  horizon: 1
   ceo:
     n_macro_nodes: 5
     ei_weight: 0.1

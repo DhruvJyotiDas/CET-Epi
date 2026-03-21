@@ -5,9 +5,13 @@ Visualization utilities for CET-Epi results.
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from pathlib import Path
 from typing import List, Dict, Optional
+
+try:
+    import seaborn as sns
+except ImportError:
+    sns = None
 
 
 class CET_EpiVisualizer:
@@ -58,8 +62,8 @@ class CET_EpiVisualizer:
                         n_samples: int = 5,
                         save_name: str = "predictions.png"):
         """Plot prediction vs actual for sample nodes."""
-        pred_np = predictions.cpu().numpy()
-        target_np = targets.cpu().numpy()
+        pred_np = predictions.detach().cpu().squeeze(-1).numpy()
+        target_np = targets.detach().cpu().squeeze(-1).numpy()
         
         n_nodes = min(n_samples, pred_np.shape[0])
         fig, axes = plt.subplots(n_nodes, 1, figsize=(12, 3*n_nodes))
@@ -77,9 +81,11 @@ class CET_EpiVisualizer:
                 ax.plot(pred_np[i], 's--', label='Predicted', alpha=0.7)
             else:
                 # Single value - scatter
-                ax.scatter(target_np[i], pred_np[i], alpha=0.5)
-                ax.plot([target_np[i].min(), target_np[i].max()],
-                       [target_np[i].min(), target_np[i].max()],
+                target_values = np.atleast_1d(target_np[i]).reshape(-1)
+                pred_values = np.atleast_1d(pred_np[i]).reshape(-1)
+                ax.scatter(target_values, pred_values, alpha=0.5)
+                ax.plot([target_values.min(), target_values.max()],
+                       [target_values.min(), target_values.max()],
                        'r--', label='Perfect')
             
             name = node_names[i] if node_names else f"Node {i}"
@@ -103,8 +109,12 @@ class CET_EpiVisualizer:
         fig, axes = plt.subplots(1, 2, figsize=(14, 6))
         
         # Heatmap
-        sns.heatmap(S_np, annot=True, fmt='.2f', cmap='Blues', 
-                   ax=axes[0], cbar_kws={'label': 'Assignment Probability'})
+        if sns is not None:
+            sns.heatmap(S_np, annot=True, fmt='.2f', cmap='Blues', 
+                       ax=axes[0], cbar_kws={'label': 'Assignment Probability'})
+        else:
+            im = axes[0].imshow(S_np, aspect='auto', cmap='Blues')
+            plt.colorbar(im, ax=axes[0], label='Assignment Probability')
         axes[0].set_xlabel('Macro Region')
         axes[0].set_ylabel('Micro Node (County)')
         axes[0].set_title('CEO Assignment Matrix')

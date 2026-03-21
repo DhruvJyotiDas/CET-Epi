@@ -3,18 +3,19 @@ CET-Epi: Causal Emergence Theory for Epidemics
 Setup configuration
 """
 
-from setuptools import setup, find_packages
 from pathlib import Path
+
+from setuptools import find_packages, setup
 
 # Read README
 readme_path = Path(__file__).parent / "README.md"
-long_description = readme_path.read_text() if readme_path.exists() else ""
+long_description = readme_path.read_text(encoding="utf-8") if readme_path.exists() else ""
 
 # Read requirements
 req_path = Path(__file__).parent / "requirements.txt"
 requirements = []
 if req_path.exists():
-    requirements = [line.strip() for line in req_path.read_text().splitlines() 
+    requirements = [line.strip() for line in req_path.read_text(encoding="utf-8").splitlines() 
                    if line.strip() and not line.startswith("#")]
 
 setup(
@@ -26,8 +27,7 @@ setup(
     author="Dhruv Jyoti Das, Raghav Sharma",
     author_email="dd4708@srmist.edu.in, rs2701@srmist.edu.in",
     url="https://github.com/yourusername/cet-epi",
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    packages=find_packages(where=".", include=["src", "src.*"]),
     python_requires=">=3.9",
     install_requires=requirements,
     extras_require={
@@ -54,7 +54,7 @@ setup(
     keywords="epidemic-forecasting causal-emergence graph-neural-networks",
     entry_points={
         "console_scripts": [
-            "cet-epi-train=training.trainer:main",
+            "cet-epi-train=src.training.trainer:main",
         ],
     },
 )

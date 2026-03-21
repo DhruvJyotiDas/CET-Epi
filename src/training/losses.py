@@ -7,38 +7,58 @@ import torch
 import torch.nn.functional as F
 
 
-def cet_epi_loss(predictions, targets, ei_loss, 
-                 assignment, 
-                 ei_weight: float = 0.1,
-                 sparsity_weight: float = 0.01):
+def _align_targets(predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+    """Coerce targets into [N, horizon, 1] to match predictions."""
+
+    if targets.dim() == 1:
+        targets = targets.unsqueeze(-1).unsqueeze(-1)
+    elif targets.dim() == 2:
+        targets = targets.unsqueeze(-1)
+
+    if predictions.shape != targets.shape:
+        raise ValueError(
+            f"Prediction/target shape mismatch: {tuple(predictions.shape)} vs {tuple(targets.shape)}"
+        )
+
+    return targets.to(device=predictions.device, dtype=predictions.dtype)
+
+
+def cet_epi_loss(
+    predictions,
+    targets,
+    ei_loss,
+    assignment,
+    ei_weight: float = 0.1,
+    sparsity_weight: float = 0.01,
+    balance_weight: float = 0.01,
+):
     """
-    Combined loss: prediction + emergence regularization + sparsity.
-    
-    Args:
-        predictions: [N, horizon, 1]
-        targets: [N, horizon, 1]
-        ei_loss: Negative EI score (to minimize = maximize EI)
-        assignment: [N, M] soft assignment matrix
-        ei_weight: Weight for emergence regularization
-        sparsity_weight: Weight for assignment sparsity
+    Combined loss: prediction + emergence regularization + assignment regularizers.
     """
-    # Prediction loss (MSE)
+
+    targets = _align_targets(predictions, targets)
+
     pred_loss = F.mse_loss(predictions, targets)
-    
-    # Emergence regularization (already negative in model)
     emergence_loss = ei_loss
-    
-    # Sparsity: encourage concentrated assignments (L1 norm)
-    # Lower entropy in assignment = more confident clustering
+
     entropy = -torch.sum(assignment * torch.log(assignment + 1e-10), dim=1).mean()
-    sparsity_loss = entropy  # Lower entropy = sparser
-    
-    # Total loss
-    total_loss = pred_loss + ei_weight * emergence_loss + sparsity_weight * sparsity_loss
-    
+    sparsity_loss = entropy
+
+    cluster_usage = assignment.mean(dim=0)
+    uniform_usage = torch.full_like(cluster_usage, 1.0 / assignment.shape[1])
+    balance_loss = F.mse_loss(cluster_usage, uniform_usage)
+
+    total_loss = (
+        pred_loss
+        + ei_weight * emergence_loss
+        + sparsity_weight * sparsity_loss
+        + balance_weight * balance_loss
+    )
+
     return {
         'total': total_loss,
         'prediction': pred_loss,
         'emergence': emergence_loss,
-        'sparsity': sparsity_loss
+        'sparsity': sparsity_loss,
+        'balance': balance_loss,
     }

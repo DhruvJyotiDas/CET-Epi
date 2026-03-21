@@ -6,7 +6,6 @@ $ErrorActionPreference = "Stop"
 # Configuration
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $ConfigFile = "$ProjectRoot\configs\chickenpox.yaml"
-$PythonScript = "$ProjectRoot\src\training\trainer.py"
 
 # Environment setup
 $env:PYTHONPATH = $ProjectRoot
@@ -51,7 +50,7 @@ Write-Host "Config: $ConfigFile" -ForegroundColor White
 Write-Host "Experiment directory: $ExpDir" -ForegroundColor White
 
 # Run training
-python $PythonScript --config $ConfigFile 2>&1 | Tee-Object "$ExpDir\training.log"
+python -m src.training.trainer --config $ConfigFile 2>&1 | Tee-Object "$ExpDir\training.log"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`nTraining completed successfully!" -ForegroundColor Green

@@ -76,7 +76,7 @@ class InterventionSimulator:
             # Cross-scale propagation metrics
             'micro_reduction': self._compute_reduction(baseline_pred, intervention_pred),
             'macro_reduction': None,  # Computed below
-            'propagation_ratio': None,  # Computed below
+            'propagation_ratio': 0.0,  # Computed below
             
             'intervention_nodes': intervention_nodes,
             'affected_macro_regions': self._get_affected_macros(
@@ -101,10 +101,8 @@ class InterventionSimulator:
         """Aggregate micro predictions to macro scale."""
         # S: [N_micro, N_macro]
         # micro_pred: [N_micro, horizon, 1]
-        N_macro = S.shape[1]
-        
         # Weighted average by assignment
-        weights = S / (S.sum(dim=0, keepdim=True).t() + 1e-10)  # [N_micro, N_macro]
+        weights = S / (S.sum(dim=0, keepdim=True) + 1e-10)  # [N_micro, N_macro]
         # micro_pred -> [N_micro, horizon]
         micro_flat = micro_pred.squeeze(-1)  # [N_micro, horizon]
         

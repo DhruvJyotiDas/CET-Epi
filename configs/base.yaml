@@ -6,7 +6,7 @@ project:
 hardware:
   device: "cuda"
   mixed_precision: true
-  compile_mode: true  # PyTorch 2.0 compile for MI300X
+  compile_mode: false
 
 training:
   epochs: 200
@@ -19,13 +19,16 @@ training:
 model:
   hidden_dim: 64
   num_layers: 2
+  horizon: 1
   dropout: 0.3
   ceo:
     n_macro_nodes: 5  # Will be learned/defined per dataset
     ei_weight: 0.1    # Lambda for emergence regularization
     sparsity_weight: 0.01
+    balance_weight: 0.01
 
 logging:
   log_interval: 10
+  val_interval: 1
   checkpoint_interval: 50
   tensorboard: true

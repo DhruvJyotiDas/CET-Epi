@@ -5,7 +5,7 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$CheckpointPath,
     
-    [string]$ConfigPath = "..\configs\chickenpox.yaml",
+    [string]$ConfigPath = "configs\chickenpox.yaml",
     
     [switch]$AnalyzeEI,
     [switch]$SimulateIntervention,
@@ -15,9 +15,11 @@ param(
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $env:PYTHONPATH = $ProjectRoot
+$ResolvedConfigPath = if ([System.IO.Path]::IsPathRooted($ConfigPath)) { $ConfigPath } else { Join-Path $ProjectRoot $ConfigPath }
+$ResolvedCheckpointPath = if ([System.IO.Path]::IsPathRooted($CheckpointPath)) { $CheckpointPath } else { Join-Path $ProjectRoot $CheckpointPath }
 
 Write-Host "CET-Epi Model Evaluation" -ForegroundColor Cyan
-Write-Host "Checkpoint: $CheckpointPath" -ForegroundColor White
+Write-Host "Checkpoint: $ResolvedCheckpointPath" -ForegroundColor White
 
 # Create evaluation script on-the-fly
 $EvalScript = @"
@@ -39,15 +41,16 @@ from src.utils.gpu import setup_gpu
 def main():
     # Setup
     device = setup_gpu()
-    config = load_config('$ConfigPath', '$ProjectRoot/configs')
+    config = load_config(r'$ResolvedConfigPath')
     
     # Load model
-    checkpoint = torch.load('$CheckpointPath', map_location=device)
+    checkpoint = torch.load(r'$ResolvedCheckpointPath', map_location=device)
     model = CET_Epi(
         n_micro=config.data.micro_nodes,
         n_macro=config.data.macro_nodes,
         in_channels=config.data.features,
-        hidden_dim=config.model.hidden_dim
+        hidden_dim=config.model.hidden_dim,
+        horizon=config.model.get('horizon', config.data.get('horizon', 1))
     ).to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
@@ -148,7 +151,12 @@ def main():
             
             pred, _, int_dict = model(x, edge_index, edge_attr, return_all=True)
             all_preds.append(pred.cpu())
-            all_targets.append(snapshot.y.unsqueeze(-1).unsqueeze(-1))
+            y = snapshot.y
+            if y.dim() == 1:
+                y = y.unsqueeze(-1).unsqueeze(-1)
+            elif y.dim() == 2:
+                y = y.unsqueeze(-1)
+            all_targets.append(y.cpu())
         
         predictions = torch.cat(all_preds, dim=0)
         targets = torch.cat(all_targets, dim=0)

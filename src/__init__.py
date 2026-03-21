@@ -9,4 +9,7 @@ using Causal Emergence Theory.
 __version__ = "0.1.0"
 __author__ = "Dhruv Jyoti Das, Raghav Sharma"
 
-from . import core, models, data, training, evaluation, utils
+__all__ = [
+    "__version__",
+    "__author__",
+]

@@ -27,11 +27,13 @@ data:
 
 model:
   hidden_dim: $HiddenDim
+  horizon: 1
   num_layers: 3
   ceo:
     n_macro_nodes: $(if ($Country -eq "italy") { 21 } else { 9 })
     ei_weight: 0.15
     sparsity_weight: 0.005
+    balance_weight: 0.01
 
 training:
   epochs: $Epochs
@@ -52,7 +54,7 @@ Write-Host "Training CET-Epi on COVID-19 $Country dataset" -ForegroundColor Gree
 Write-Host "Config: $ConfigPath" -ForegroundColor Cyan
 
 # Run training
-python "$ProjectRoot\src\training\trainer.py" --config $ConfigPath
+python -m src.training.trainer --config $ConfigPath
 
 # Cleanup config
 Remove-Item $ConfigPath -Force

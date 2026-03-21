@@ -1,8 +1,7 @@
 # Phase 1: MI300X GPU optimization utilities
-"""MI300X GPU optimization utilities."""
+import os
 
 import torch
-import os
 
 
 def setup_gpu():
@@ -10,25 +9,24 @@ def setup_gpu():
     if not torch.cuda.is_available():
         print("Warning: CUDA/ROCm not available")
         return torch.device("cpu")
-    
+
     device = torch.device("cuda")
-    
-    # MI300X specific optimizations
-    torch.backends.cudnn.benchmark = True
-    torch.backends.cuda.matmul.allow_tf32 = True
-    torch.backends.cudnn.allow_tf32 = True
-    
-    # Enable TF32 for Ampere+ (MI300X supports similar)
-    # Note: MI300X uses ROCm, but PyTorch abstracts this
+
+    # Configure allocator before the first heavy allocation when possible.
+    os.environ.setdefault('PYTORCH_HIP_ALLOC_CONF', 'max_split_size_mb:512')
+    os.environ.setdefault('PYTORCH_CUDA_ALLOC_CONF', 'max_split_size_mb:512')
+
+    if hasattr(torch.backends, "cudnn"):
+        torch.backends.cudnn.benchmark = True
+        torch.backends.cudnn.allow_tf32 = True
+    if hasattr(torch.backends, "cuda") and hasattr(torch.backends.cuda, "matmul"):
+        torch.backends.cuda.matmul.allow_tf32 = True
+
     torch.set_float32_matmul_precision('high')
-    
-    # Memory management for 192GB VRAM
-    # Allow large allocations
-    os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:512'
-    
+
     print(f"Device: {torch.cuda.get_device_name(0)}")
     print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
-    
+
     return device
 
 
@@ -46,7 +44,7 @@ def optimize_model(model: torch.nn.Module, mode: str = "default") -> torch.nn.Mo
             print(f"Model compiled with mode: {mode}")
         except Exception as e:
             print(f"Model compilation failed: {e}")
-    
+
     return model
 
 

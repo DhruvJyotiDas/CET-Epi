@@ -2,12 +2,14 @@
 Experiment logging utilities.
 """
 
+import csv
 import json
 import pickle
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, Optional
-import csv
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import torch
 
 
 class ExperimentLogger:
