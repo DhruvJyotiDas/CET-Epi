@@ -1,22 +1,35 @@
-# Hungary Chickenpox Dataset Config
-inherit: base.yaml
+# FULL CONFIG (BALANCED FOR REAL TRAINING)
 
 data:
   name: "chickenpox"
   dataset: "HungaryCounty"
-  micro_nodes: 20  # 20 counties
-  macro_nodes: 5   # Learned regions
-  features: 4     # Node features
+  micro_nodes: 20
+  macro_nodes: 5
+  features: 1
   train_ratio: 0.8
-  lags: 4         # Historical weeks to use
+  lags: 32
+  horizon: 1
 
 model:
-  hidden_dim: 32
+  hidden_dim: 128
   horizon: 1
   ceo:
     n_macro_nodes: 5
-    ei_weight: 0.1
+    ei_weight: 0.0005        # 🔥 small (keep emergence but not dominate)
+    sparsity_weight: 0.0002  # 🔥 VERY LOW (prevents collapse)
+    balance_weight: 0.0002   # 🔥 VERY LOW
 
 training:
-  epochs: 100
-  learning_rate: 0.005
+  epochs: 150
+  learning_rate: 0.0015      # 🔥 stable learning
+  weight_decay: 0.0001
+  gradient_clip: 1.0
+  early_stopping: 50        # 🔥 allow model to learn properly
+
+hardware:
+  mixed_precision: false
+  compile_mode: false
+
+logging:
+  val_interval: 1
+  checkpoint_interval: 5

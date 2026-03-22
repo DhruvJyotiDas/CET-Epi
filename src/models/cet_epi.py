@@ -68,25 +68,22 @@ class CET_Epi(nn.Module):
                 return_all: bool = False):
         """
         Forward pass.
-        
-        Args:
-            x: [N_micro, T, F] or [N_micro, F] (temporal or static features)
-            edge_index: [2, E] micro graph edges
-            edge_weight: [E] edge weights
-            return_all: Return intermediate outputs for analysis
-        
-        Returns:
-            predictions: [N_micro, horizon, out_dim]
-            ei_loss: Emergence regularization term
-            (optional) intermediate dict
         """
         # 1. Micro encoding
         h_micro = self.micro_encoder(x, edge_index, edge_weight)
         
-        # 2. CEO: Learn optimal macro scale
-        h_macro, edge_macro, weight_macro, ei_score, S = self.ceo(
+        # 2. CEO: Learn optimal macro scale (ROBUST HANDLING)
+        ceo_outputs = self.ceo(
             h_micro, edge_index, edge_weight, return_ei=True
         )
+
+        # 🔥 FIX: Handle variable outputs safely
+        if len(ceo_outputs) == 5:
+            h_macro, edge_macro, weight_macro, ei_score, S = ceo_outputs
+        elif len(ceo_outputs) > 5:
+            h_macro, edge_macro, weight_macro, ei_score, S = ceo_outputs[:5]
+        else:
+            raise ValueError(f"Unexpected CEO output length: {len(ceo_outputs)}")
         
         # 3. Macro encoding
         h_macro = self.macro_encoder(h_macro, edge_macro, weight_macro)
@@ -97,7 +94,7 @@ class CET_Epi(nn.Module):
         # 5. Prediction
         predictions = self.predictor(h_micro_fused, h_macro_fused, S)
         
-        # Emergence loss (negative EI to maximize)
+        # Emergence loss (maximize EI → minimize -EI)
         if ei_score is None:
             ei_loss = torch.zeros((), device=predictions.device, dtype=predictions.dtype)
         else:
@@ -123,6 +120,5 @@ class CET_Epi(nn.Module):
     
     def anneal_temperature(self, epoch: int, total_epochs: int):
         """Anneal CEO temperature for harder assignments."""
-        # Linear annealing from 1.0 to 0.1
         new_temp = max(0.1, 1.0 - 0.9 * (epoch / total_epochs))
         self.ceo.set_temperature(new_temp)

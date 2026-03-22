@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from .signal import TemporalGraphDataset, TemporalGraphSnapshot, temporal_signal_split
+from .temporal_signal import TemporalGraphDataset, TemporalGraphSnapshot, temporal_signal_split
 
 
 class MultiScaleCOVIDLoader:
